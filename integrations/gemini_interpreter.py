@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import asyncio
 from typing import Dict, Any
 
 from google import genai
@@ -35,7 +36,30 @@ class GeminiInterpreter:
         """
         logger.info(f"Generating spatial summary for job {job_id} using {self.model_name}")
         
+        persona_map = {
+            "oncologist": (
+                "You are assisting a board-certified oncologist reviewing precision "
+                "medicine eligibility. Prioritize PD-L1 status, TMB signals, and "
+                "CD8 infiltration patterns."
+            ),
+            "pathologist": (
+                "You are assisting a clinical pathologist interpreting tissue architecture. "
+                "Prioritize spatial density gradients, immune phenotype classification, "
+                "and entropy patterns."
+            ),
+            "researcher": (
+                "You are assisting a translational research scientist. "
+                "Prioritize mechanistic hypotheses and signal combinations without "
+                "clinical language constraints."
+            ),
+        }
+        persona_prefix = persona_map.get(
+            audience,
+            f"You are assisting a medical professional specializing in {audience}."
+        )
+
         system_instruction = (
+            persona_prefix + "\n\n"
             "You are a clinical interpretation assistant for virtual proteomics outputs. "
             "You must adhere strictly to the following rules:\n"
             "1. Use ONLY the evidence provided in the input payload.\n"
@@ -50,16 +74,32 @@ class GeminiInterpreter:
             f"10. The report style should be {report_style}."
         )
 
+        OR_LOGIC_BLOCK = (
+            "\n\nSIGNAL COMBINATION LOGIC — apply strictly to biological_hypotheses ONLY:\n"
+            "- If PD_L1 density > 50 AND CD8 density > 30: "
+            "consider immune-active phenotype hypothesis.\n"
+            "- If PD_L1 density > 50 AND CD8 density < 20: "
+            "consider immune-excluded phenotype hypothesis.\n"
+            "- If spatial_metrics entropy > 3.0 AND immune_phenotype contains 'excluded': "
+            "consider TMB-H in silico hypothesis.\n"
+            "- If CD20 density > 20 AND CD8 density > 30: "
+            "consider tertiary lymphoid structure signal.\n"
+            "Label each hypothesis with a confidence level: HIGH, MODERATE, or LOW.\n"
+            "If data is insufficient to evaluate a condition, do not generate a hypothesis for it."
+        )
+
         prompt = (
             f"Job ID: {job_id}\n\n"
             f"Biomarker and Spatial Evidence:\n"
-            f"{json.dumps(biomarker_result, indent=2)}\n\n"
+            f"{json.dumps(biomarker_result, indent=2)}"
+            f"{OR_LOGIC_BLOCK}\n\n"
             "Generate the structured clinical interpretation based strictly on the above data."
         )
 
         try:
             # We use the modern genai SDK. Structured output uses the Pydantic schema.
-            response = self.client.models.generate_content(
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
                 model=self.model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
