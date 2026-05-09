@@ -54,9 +54,9 @@ class AzureIntegrator:
             )
             self._use_mock = True
 
-    def submit_job(self, payload: Dict[str, Any]) -> str:
+    async def submit_job(self, payload: Dict[str, Any]) -> str:
         """Create a job in the store and kick off async processing."""
-        job_id = self.job_store.create_job(payload)
+        job_id = await self.job_store.create_job(payload)
         asyncio.create_task(self._process_slide_async(job_id, payload))
         return job_id
 
@@ -64,19 +64,19 @@ class AzureIntegrator:
         self, job_id: str, payload: Dict[str, Any]
     ) -> None:
         """Run preprocessing → GigaTIME inference → tensor reduction."""
-        self.job_store.update_job(job_id, JobStatus.RUNNING)
+        await self.job_store.update_job(job_id, JobStatus.RUNNING)
 
         try:
             image_path = payload.get("image_path", "")
             result = await asyncio.get_event_loop().run_in_executor(
                 None, self._run_inference, image_path
             )
-            self.job_store.update_job(job_id, JobStatus.DONE, result=result)
+            await self.job_store.update_job(job_id, JobStatus.DONE, result=result)
             logger.info("Job %s completed. Tile count: %d", job_id, result.get("tile_count", 0))
 
         except Exception as exc:
             logger.exception("Job %s failed: %s", job_id, exc)
-            self.job_store.update_job(
+            await self.job_store.update_job(
                 job_id,
                 JobStatus.FAILED,
                 result={"error": str(exc)},

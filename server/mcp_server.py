@@ -2,6 +2,8 @@ import json
 import logging
 from typing import Any, Dict, List
 
+from pydantic import ValidationError
+
 from mcp.server import Server
 from mcp.types import TextContent, Tool as MCPTool
 
@@ -27,13 +29,9 @@ class GigaTIMEMCPServer:
         @self.app.call_tool()
         async def call_tool(name: str, arguments: dict) -> List[TextContent]:
             try:
-                # Retrieve the tool from our single source of truth
                 tool = self.registry.get_tool(name)
-                
-                # Execute the registered handler safely
                 result = await tool.handler(**arguments)
-                
-                # Convert the result to text content as required by MCP
+
                 if not isinstance(result, str):
                     try:
                         result_text = json.dumps(result, indent=2)
@@ -41,12 +39,23 @@ class GigaTIMEMCPServer:
                         result_text = str(result)
                 else:
                     result_text = result
-                    
+
                 return [TextContent(type="text", text=result_text)]
-                
+
             except ValueError as e:
-                logger.error(f"Tool missing error: {e}")
-                return [TextContent(type="text", text=f"Error: {str(e)}")]
+                logger.error(f"Tool missing or validation error: {e}")
+                return [TextContent(type="text", text=f"Bad Request: {str(e)}")]
+
+            except KeyError as e:
+                logger.error(f"Missing required parameter in tool payload: {e}")
+                return [TextContent(type="text",
+                                    text=f"Input Error: Missing required parameter {str(e)}")]
+
+            except ValidationError as e:
+                logger.error(f"Pydantic validation error in tool '{name}': {e}")
+                return [TextContent(type="text", text=f"Validation Error: {str(e)}")]
+
             except Exception as e:
-                logger.exception(f"Unexpected error executing tool '%s'", name)
-                return [TextContent(type="text", text=f"Runtime error executing '{name}': {str(e)}")]
+                logger.exception(f"Systemic failure executing tool '{name}'")
+                return [TextContent(type="text",
+                                    text=f"Internal Server Error in '{name}': {str(e)}")]

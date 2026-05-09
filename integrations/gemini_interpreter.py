@@ -1,4 +1,4 @@
-import os
+
 import json
 import logging
 import asyncio
@@ -15,13 +15,10 @@ class GeminiInterpreter:
     """Service to interpret deterministic spatial data using Gemini."""
     
     def __init__(self):
-        # Initializes using GEMINI_API_KEY from environment variables by default.
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY environment variable is required for GeminiInterpreter.")
-            
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-        self.client = genai.Client(api_key=api_key)
+        from config.settings import get_settings
+        settings = get_settings()
+        self.model_name = settings.gemini_model
+        self.client = genai.Client(api_key=settings.gemini_api_key)
 
     async def summarize_spatial_architecture(
         self,

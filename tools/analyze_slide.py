@@ -34,7 +34,7 @@ class AnalyzeSlideTool(BaseTool):
         await asyncio.sleep(1)
         
         # Submit job to Azure integrator asynchronously
-        job_id = self.azure_integrator.submit_job(payload.to_json())
+        job_id = await self.azure_integrator.submit_job(payload.to_json())
         
         return {
             "status": JobStatus.PENDING.value,

@@ -35,7 +35,7 @@ class FetchBiomarkersTool(BaseTool):
         if not job_id:
             return {"error": "job_id is required."}
             
-        job = self.job_store.get_job(job_id)
+        job = await self.job_store.get_job(job_id)
         if not job:
             return {"error": f"Job {job_id} not found."}
             

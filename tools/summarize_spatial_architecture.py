@@ -34,7 +34,7 @@ class SummarizeSpatialArchitectureTool(BaseTool):
             return {"status": "FAILED", "error": f"Invalid payload: {e}"}
 
         # Fetch job from JobStore
-        job = self.job_store.get_job(payload.job_id)
+        job = await self.job_store.get_job(payload.job_id)
         if not job:
             return {"status": "FAILED", "error": f"Job {payload.job_id} does not exist."}
 
