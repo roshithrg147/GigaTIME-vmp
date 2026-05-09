@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 class Settings(BaseSettings):
-    gemini_api_key: Optional[str] = "AIzaSyCyHjyFd_LVs6WIFn7ax3YsQiVkMe5pKPI"
+    gemini_api_key: Optional[str] = None
     database_url: str = "sqlite:///./gigatime_jobs.db"
     log_level: str = "INFO"
 

@@ -1,55 +1,51 @@
-# GigaTIME MCP Server
+# GigaTIME-VMP MCP Server
 
-A robust, type-safe, modular, and deterministic Model Context Protocol (MCP) server.
+A robust, type-safe, modular, and deterministic Model Context Protocol (MCP) server for clinical interpretation of spatial pathology architecture using the GigaTIME AI model.
 
 ## Overview
 
-GigaTIME MCP Server implements the foundational architecture for an MCP server wrapper. It is designed to handle MCP protocol communication, provide a solid `ToolRegistry` for metadata management, and establish a clear entry point (`main.py`) using `stdio` for integration. It adheres to strict separation between core infrastructure and future business logic or external integrations.
+GigaTIME-VMP connects the official `healthcareai-toolkit` GigaTIME inference client with an MCP integration layer and an HTTP FastAPI server. It exposes endpoints and MCP tools designed to process Whole Slide Images (WSI), reduce their 4D tensor outputs into clinically relevant structured data, and interface with Google Gemini for plain-text clinical summaries.
 
 ## Features
 
-- **Type-safe:** Uses `pydantic` schemas for robust configuration and state management.
-- **Modular:** Clear boundaries between server implementation, routing, and tools.
-- **Deterministic:** Core mechanisms are built avoiding side effects.
-- **Extensible:** An internal tool registry allows easy registration of additional MCP capabilities.
+- **Model Context Protocol (MCP):** Connects to MCP hosts via `stdio` for standard IDE integration.
+- **Cloud Run / HTTP API:** Includes an out-of-the-box FastAPI app for standalone deployment.
+- **Real Inference Backend:** Integrates directly with Azure ML deployments of GigaTIME via the `healthcareai-toolkit`.
+- **Offline / Mock Mode:** Capable of running locally without Azure credentials by synthesizing biomarker tensors.
+- **LLM Summary Generation:** Automates structured clinical pathology interpretations using Gemini 2.5 Flash.
 
-## Setup
+## Setup & Local Usage
 
-1. **Environment:** Ensure you have Python installed. You can set up your virtual environment using `venv` or `uv`:
+1. **Environment:** Setup a clean Python 3.11 environment (recommended tool: `uv`).
    ```bash
-   python -m venv venv
-   source venv/bin/activate
+   uv venv -p 3.11
+   source .venv/bin/activate
    ```
 2. **Install dependencies:**
    ```bash
-   pip install -r requirements.txt
+   uv pip install -r requirements.txt
    ```
-   *(Note: The project may also use `pyproject.toml` for standard packaging.)*
-
 3. **Configuration:**
-   Copy the example environment file and configure it as needed.
+   Copy the example environment file and add your credentials.
    ```bash
    cp .env.example .env
    ```
+   *Note: Set `GIGATIME_MODEL_ENDPOINT=MOCK` if you are running locally without an Azure ML deployment.*
 
-## Usage
+4. **Run the HTTP API (FastAPI):**
+   ```bash
+   uvicorn app:app --host 0.0.0.0 --port 8080
+   ```
 
-To start the MCP server, run:
-
-```bash
-python main.py
-```
-
-It is intended to communicate over stdio, so it is typically run by a client or another orchestration agent (such as an MCP client).
+5. **Run as an MCP Tool:**
+   Configure your MCP host (like Claude Desktop) to execute `python main.py` using your environment's python binary.
 
 ## Directory Structure
 
-- `main.py` - The main entry point for the stdio server.
-- `config/` - Configuration management.
-- `models/` - Pydantic models and schemas.
-- `server/` - Core MCP server logic and ToolRegistry.
-- `integrations/` - External platform connections.
-- `tools/` - Handlers for various tools exposed by the MCP server.
-- `store/` - Persistent storage mechanisms or interfaces.
-- `tests/` - Test suite.
-- `TechnicalDocumentation/` - Detailed architectural and technical docs.
+- `main.py` - The main entry point for the stdio MCP server.
+- `app.py` - The FastAPI entrypoint for Cloud Run / HTTP routing.
+- `integrations/` - Preprocessing WSI arrays, tensor reduction, Azure ML connections, and Gemini.
+- `tools/` - Handlers for the MCP capabilities (`analyze_slide`, `fetch_biomarkers`, `summarize_spatial_architecture`).
+- `store/` - Persistent storage mechanisms for background slide processing.
+- `config/` - Environment configuration mapping via Pydantic.
+- `models/` - Pydantic models for internal typing.
